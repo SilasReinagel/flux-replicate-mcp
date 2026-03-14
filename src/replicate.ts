@@ -10,13 +10,22 @@ import { apiError, validationError } from './errors.js';
  * Supported Flux models
  */
 export const FLUX_MODELS = {
+  // Flux 1 series
   'flux-1.1-pro': 'black-forest-labs/flux-1.1-pro',
   'flux-pro': 'black-forest-labs/flux-pro',
   'flux-schnell': 'black-forest-labs/flux-schnell',
   'flux-ultra': 'black-forest-labs/flux-ultra',
+  // Flux 2 series
+  'flux-2-pro': 'black-forest-labs/flux-2-pro',
+  'flux-2-max': 'black-forest-labs/flux-2-max',
+  'flux-2-flex': 'black-forest-labs/flux-2-flex',
+  'flux-2-dev': 'black-forest-labs/flux-2-dev',
+  'flux-2-klein': 'black-forest-labs/flux-2-klein-4b',
 } as const;
 
 export type FluxModel = keyof typeof FLUX_MODELS;
+
+const FLUX_2_MODELS = new Set<string>(['flux-2-pro', 'flux-2-max', 'flux-2-flex', 'flux-2-dev', 'flux-2-klein']);
 
 /**
  * Image generation parameters
@@ -111,30 +120,53 @@ export class ReplicateClient {
       const height = params.height || 768;
       const aspectRatio = getAspectRatio(width, height);
 
-      // Prepare base input parameters using aspect_ratio instead of width/height
-      const baseInput = {
-        prompt: params.prompt.trim(),
-        aspect_ratio: aspectRatio,
-        num_outputs: params.num_outputs || 1,
-        ...(params.seed && { seed: params.seed }),
-      };
-
-      // Add model-specific parameters
       let input: any;
-      if (model === 'flux-schnell') {
-        // Flux Schnell has different parameter constraints
+
+      if (FLUX_2_MODELS.has(model)) {
+        // Flux 2 series parameters
         input = {
-          ...baseInput,
-          num_inference_steps: Math.min(params.num_inference_steps || 4, 4), // Max 4 for schnell
-          // Flux Schnell doesn't use guidance_scale
+          prompt: params.prompt.trim(),
+          aspect_ratio: aspectRatio,
+          ...(params.seed != null && { seed: params.seed }),
         };
+
+        if (model === 'flux-2-klein') {
+          // Klein uses output_megapixels instead of resolution
+          input.output_megapixels = '1';
+          input.go_fast = true;
+        } else if (model === 'flux-2-dev') {
+          // Dev uses width/height directly (max 1440, multiples of 32)
+          input.go_fast = true;
+        } else if (model === 'flux-2-flex') {
+          // Flex supports steps and guidance
+          input.resolution = '1 MP';
+          input.steps = params.num_inference_steps || 30;
+          input.guidance = params.guidance_scale || 4.5;
+        } else {
+          // Pro and Max use resolution
+          input.resolution = '1 MP';
+        }
       } else {
-        // Flux Pro parameters
-        input = {
-          ...baseInput,
-          guidance_scale: params.guidance_scale || 3.5,
-          num_inference_steps: params.num_inference_steps || 28,
+        // Flux 1 series parameters
+        const baseInput = {
+          prompt: params.prompt.trim(),
+          aspect_ratio: aspectRatio,
+          num_outputs: params.num_outputs || 1,
+          ...(params.seed != null && { seed: params.seed }),
         };
+
+        if (model === 'flux-schnell') {
+          input = {
+            ...baseInput,
+            num_inference_steps: Math.min(params.num_inference_steps || 4, 4),
+          };
+        } else {
+          input = {
+            ...baseInput,
+            guidance_scale: params.guidance_scale || 3.5,
+            num_inference_steps: params.num_inference_steps || 28,
+          };
+        }
       }
 
       // Run the prediction
@@ -142,10 +174,13 @@ export class ReplicateClient {
       
       const processingTime = Date.now() - startTime;
 
-      // Handle the result
+      // Handle the result - Replicate SDK may return strings, FileOutput objects, or arrays
       let imageUrls: string[];
       if (Array.isArray(prediction)) {
-        imageUrls = prediction;
+        imageUrls = prediction.map((item: any) => String(item));
+      } else if (prediction && typeof prediction === 'object') {
+        // FileOutput object - toString() returns the URL
+        imageUrls = [String(prediction)];
       } else if (typeof prediction === 'string') {
         imageUrls = [prediction];
       } else {

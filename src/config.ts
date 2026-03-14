@@ -7,9 +7,13 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
+export type FluxModelName = 'flux-1.1-pro' | 'flux-pro' | 'flux-schnell' | 'flux-ultra' | 'flux-2-pro' | 'flux-2-max' | 'flux-2-flex' | 'flux-2-dev' | 'flux-2-klein';
+
+const VALID_MODELS: FluxModelName[] = ['flux-1.1-pro', 'flux-pro', 'flux-schnell', 'flux-ultra', 'flux-2-pro', 'flux-2-max', 'flux-2-flex', 'flux-2-dev', 'flux-2-klein'];
+
 export interface Config {
   replicateApiKey: string;
-  defaultModel: 'flux-1.1-pro' | 'flux-pro' | 'flux-schnell' | 'flux-ultra';
+  defaultModel: FluxModelName;
   outputFormat: 'jpg' | 'png' | 'webp';
   outputQuality: number;
   workingDirectory: string;
@@ -17,7 +21,7 @@ export interface Config {
 
 export interface CliArgs {
   replicateApiKey?: string;
-  defaultModel?: 'flux-1.1-pro' | 'flux-pro' | 'flux-schnell' | 'flux-ultra';
+  defaultModel?: FluxModelName;
   outputFormat?: 'jpg' | 'png' | 'webp';
   outputQuality?: number;
   workingDirectory?: string;
@@ -28,10 +32,17 @@ export interface CliArgs {
  * Model pricing in USD per image
  */
 export const MODEL_PRICING = {
+  // Flux 1 series
   'flux-1.1-pro': 0.04,
   'flux-pro': 0.04,
   'flux-schnell': 0.003,
   'flux-ultra': 0.06,
+  // Flux 2 series (approximate per-image at 1MP)
+  'flux-2-pro': 0.03,
+  'flux-2-max': 0.08,
+  'flux-2-flex': 0.06,
+  'flux-2-dev': 0.012,
+  'flux-2-klein': 0.003,
 } as const;
 
 /**
@@ -64,8 +75,8 @@ export const parseCliArgs = (): CliArgs => {
       
       case '--model':
       case '-m':
-        if (nextArg && (nextArg === 'flux-1.1-pro' || nextArg === 'flux-pro' || nextArg === 'flux-schnell' || nextArg === 'flux-ultra')) {
-          args.defaultModel = nextArg;
+        if (nextArg && VALID_MODELS.includes(nextArg as FluxModelName)) {
+          args.defaultModel = nextArg as FluxModelName;
           i++;
         }
         break;
@@ -122,8 +133,9 @@ OPTIONS:
   -k, --api-key, --replicate-api-key <token>
                         Replicate API token (required)
   
-  -m, --model <model>   Default model: flux-1.1-pro, flux-pro, flux-schnell, or flux-ultra
-                        (default: flux-1.1-pro)
+  -m, --model <model>   Default model (default: flux-2-pro)
+                        Flux 1: flux-1.1-pro, flux-pro, flux-schnell, flux-ultra
+                        Flux 2: flux-2-pro, flux-2-max, flux-2-flex, flux-2-dev, flux-2-klein
   
   -f, --format <format> Default output format: jpg, png, or webp
                         (default: jpg)
@@ -139,7 +151,7 @@ OPTIONS:
 
 ENVIRONMENT VARIABLES:
   REPLICATE_API_TOKEN          Replicate API token
-  FLUX_DEFAULT_MODEL           Default model (flux-1.1-pro|flux-pro|flux-schnell|flux-ultra)
+  FLUX_DEFAULT_MODEL           Default model (see --model for options)
   FLUX_OUTPUT_FORMAT           Default format (jpg|png|webp)
   FLUX_OUTPUT_QUALITY          Default quality (1-100)
   FLUX_WORKING_DIRECTORY       Custom working directory
@@ -242,7 +254,7 @@ export const loadConfig = (cliArgs?: CliArgs): Config => {
 
   return {
     replicateApiKey,
-    defaultModel: args.defaultModel || (process.env['FLUX_DEFAULT_MODEL'] as 'flux-1.1-pro' | 'flux-pro' | 'flux-schnell' | 'flux-ultra') || 'flux-1.1-pro',
+    defaultModel: args.defaultModel || (process.env['FLUX_DEFAULT_MODEL'] as FluxModelName) || 'flux-2-pro',
     outputFormat: args.outputFormat || (process.env['FLUX_OUTPUT_FORMAT'] as 'jpg' | 'png' | 'webp') || 'jpg',
     outputQuality: args.outputQuality || parseInt(process.env['FLUX_OUTPUT_QUALITY'] || '80', 10),
     workingDirectory,

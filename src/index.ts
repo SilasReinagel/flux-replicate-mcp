@@ -57,7 +57,7 @@ class FluxMcpServer {
         tools: [
           {
             name: 'generate_image',
-            description: 'Generate images using Flux Pro or Flux Schnell models',
+            description: 'Generate images using Flux 1 or Flux 2 series models via Replicate',
             inputSchema: {
               type: 'object',
               properties: {
@@ -67,8 +67,8 @@ class FluxMcpServer {
                 },
                 model: {
                   type: 'string',
-                  enum: ['flux-1.1-pro', 'flux-pro', 'flux-schnell', 'flux-ultra'],
-                  description: 'Flux model to use (default: flux-1.1-pro)',
+                  enum: ['flux-1.1-pro', 'flux-pro', 'flux-schnell', 'flux-ultra', 'flux-2-pro', 'flux-2-max', 'flux-2-flex', 'flux-2-dev', 'flux-2-klein'],
+                  description: 'Flux model to use (default: flux-2-pro). Flux 2 series offers improved quality and speed.',
                 },
                 output_path: {
                   type: 'string',
