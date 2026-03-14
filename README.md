@@ -1,5 +1,7 @@
 # Flux Replicate MCP Server
 
+![Generated with Flux 2 Pro via this MCP server](examples/hero.webp)
+
 A **simple** Model Context Protocol (MCP) server for generating images using Flux models via the Replicate API.
 
 ## ✨ Simplicity First
@@ -50,7 +52,7 @@ flux-replicate-mcp --help
 
 **Available CLI Arguments:**
 - `--api-key/-k/--replicate-api-key`: Replicate API token (required)
-- `--model/-m`: Default model (`flux-1.1-pro`, `flux-pro`, `flux-schnell`, `flux-ultra`)
+- `--model/-m`: Default model (`flux-2-pro`, `flux-2-max`, `flux-2-flex`, `flux-2-dev`, `flux-2-klein`, `flux-1.1-pro`, `flux-pro`, `flux-schnell`, `flux-ultra`)
 - `--format/-f`: Output format (`jpg`, `png`, `webp`)
 - `--quality/-q`: Quality setting (1-100)
 - `--working-directory/-d/--dir`: Custom working directory
@@ -89,12 +91,24 @@ All configuration is done via environment variables or CLI arguments:
 | Variable | CLI Argument | Required | Default | Description |
 |----------|--------------|----------|---------|-------------|
 | `REPLICATE_API_TOKEN` | `--api-key` | ✅ | - | Your Replicate API token |
-| `FLUX_DEFAULT_MODEL` | `--model` | ❌ | `flux-1.1-pro` | Default model |
+| `FLUX_DEFAULT_MODEL` | `--model` | ❌ | `flux-2-pro` | Default model |
 | `FLUX_OUTPUT_FORMAT` | `--format` | ❌ | `jpg` | Default output format |
 | `FLUX_OUTPUT_QUALITY` | `--quality` | ❌ | `80` | Default quality for lossy formats (1-100) |
 | `FLUX_WORKING_DIRECTORY` | `--working-directory` | ❌ | Platform-specific | Custom working directory |
 
 ## 🎨 Supported Models
+
+### Flux 2 Series (Recommended)
+
+| Model | Cost per Image | Speed | Quality | Best For |
+|-------|----------------|-------|---------|----------|
+| `flux-2-pro` | $0.030 | Medium | Highest | Professional work, detailed images (default) |
+| `flux-2-max` | $0.080 | Slow | Ultra High | Premium quality, final outputs |
+| `flux-2-flex` | $0.060 | Medium | High | Flexible, general purpose |
+| `flux-2-dev` | $0.012 | Fast | Good | Development, experimentation |
+| `flux-2-klein` | $0.003 | Fast | Good | Quick iterations, budget-friendly |
+
+### Flux 1 Series
 
 | Model | Cost per Image | Speed | Quality | Best For |
 |-------|----------------|-------|---------|----------|
@@ -112,7 +126,7 @@ Generate images using Flux models with cost tracking.
 **Parameters:**
 - `prompt` (required): Text description of the image to generate
 - `output_path` (optional): Absolute file path for the generated image. If not provided, auto-generated filename will be used in server working directory.
-- `model` (optional): Flux model to use (default: `flux-1.1-pro`)
+- `model` (optional): Flux model to use (default: `flux-2-pro`)
 - `width` (optional): Image width in pixels (default: 1024)
 - `height` (optional): Image height in pixels (default: 768)
 - `quality` (optional): Image quality for lossy formats (1-100, default: 80)
@@ -237,8 +251,8 @@ Track your spending with built-in cost reporting:
 - Each generation shows the exact cost
 - Model pricing clearly displayed
 - Choose models based on budget vs quality needs
-- Use `flux-schnell` for cheap iterations ($0.003)
-- Use `flux-ultra` for premium results ($0.060)
+- Use `flux-2-klein` for cheap iterations ($0.003)
+- Use `flux-2-max` for premium results ($0.080)
 
 ## 📦 Installation & Usage
 

@@ -124,6 +124,10 @@ generated/
 *.bmp
 *.tiff
 
+# Allow example images
+!examples/
+!examples/**
+
 # Backup files
 *.backup
 *.bak
