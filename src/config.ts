@@ -17,6 +17,7 @@ export interface Config {
   outputFormat: 'jpg' | 'png' | 'webp';
   outputQuality: number;
   workingDirectory: string;
+  inlineImages: boolean;
 }
 
 export interface CliArgs {
@@ -25,6 +26,7 @@ export interface CliArgs {
   outputFormat?: 'jpg' | 'png' | 'webp';
   outputQuality?: number;
   workingDirectory?: string;
+  inlineImages?: boolean;
   help?: boolean;
 }
 
@@ -109,6 +111,10 @@ export const parseCliArgs = (): CliArgs => {
         }
         break;
       
+      case '--inline-images':
+        args.inlineImages = true;
+        break;
+
       case '--help':
       case '-h':
         args.help = true;
@@ -147,6 +153,9 @@ OPTIONS:
                         Custom working directory for generated images
                         (default: platform-specific)
   
+  --inline-images      Include generated images inline in tool responses
+                        (opt-in, off by default to save tokens)
+
   -h, --help           Show this help message
 
 ENVIRONMENT VARIABLES:
@@ -155,6 +164,7 @@ ENVIRONMENT VARIABLES:
   FLUX_OUTPUT_FORMAT           Default format (jpg|png|webp)
   FLUX_OUTPUT_QUALITY          Default quality (1-100)
   FLUX_WORKING_DIRECTORY       Custom working directory
+  FLUX_INLINE_IMAGES           Include images inline (true|false)
 
 EXAMPLES:
   # Using CLI arguments
@@ -258,6 +268,7 @@ export const loadConfig = (cliArgs?: CliArgs): Config => {
     outputFormat: args.outputFormat || (process.env['FLUX_OUTPUT_FORMAT'] as 'jpg' | 'png' | 'webp') || 'jpg',
     outputQuality: args.outputQuality || parseInt(process.env['FLUX_OUTPUT_QUALITY'] || '80', 10),
     workingDirectory,
+    inlineImages: args.inlineImages || process.env['FLUX_INLINE_IMAGES'] === 'true' || false,
   };
 };
 

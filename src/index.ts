@@ -13,7 +13,7 @@ import { ImageProcessor } from './image.js';
 import { TempManager } from './temp.js';
 import { getConfig, ensureWorkingDirectory, calculateCost } from './config.js';
 import { validationError, processingError, McpError } from './errors.js';
-import { info, error } from './log.js';
+import { error } from './log.js';
 import { join, isAbsolute, basename, dirname } from 'path';
 import { promises as fs } from 'fs';
 
@@ -87,6 +87,10 @@ class FluxMcpServer {
                   minimum: 1,
                   maximum: 100,
                   description: 'Image quality for lossy formats (default: 80)',
+                },
+                return_inline_image: {
+                  type: 'boolean',
+                  description: 'Return the generated image inline as base64 in the response. Only set to true if your client can render images (e.g. a chat UI with image support). Leave false for text-only terminals, CI pipelines, or agent-to-agent workflows where inline images waste tokens. The image is always saved to disk regardless.',
                 },
               },
               required: ['prompt'],
@@ -188,16 +192,6 @@ class FluxMcpServer {
     // Now we know model is a valid FluxModel
     const model = modelParam;
 
-    info('Starting image generation', { 
-      prompt, 
-      model, 
-      outputPath: args.output_path,
-      resolvedOutputPath, 
-      workingDirectory: this.workingDirectory,
-      width, 
-      height 
-    });
-
     try {
       // Generate image
       const result = await this.replicateClient.generateImage({
@@ -234,23 +228,26 @@ class FluxMcpServer {
       // Calculate cost
       const cost = calculateCost(model);
 
-      info('Image generation completed', {
-        outputPath: processResult.outputPath,
-        fileSize: processResult.fileSize,
-        dimensions: `${processResult.width}x${processResult.height}`,
-        processingTime: result.processingTime,
-        model,
-        cost: `$${cost.toFixed(3)}`,
+      const content: any[] = [];
+
+      const inlineImage = typeof args.return_inline_image === 'boolean' ? args.return_inline_image : config.inlineImages;
+
+      if (inlineImage) {
+        const savedImage = await fs.readFile(processResult.outputPath);
+        const mimeType = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[processResult.format] || 'image/jpeg';
+        content.push({
+          type: 'image',
+          data: savedImage.toString('base64'),
+          mimeType,
+        });
+      }
+
+      content.push({
+        type: 'text',
+        text: `Image generated successfully!\n\nOutput: ${processResult.outputPath}\nModel: ${model}\nDimensions: ${processResult.width}x${processResult.height}\nFile size: ${Math.round(processResult.fileSize / 1024)}KB\nProcessing time: ${result.processingTime}ms\nCost: $${cost.toFixed(3)}\nWorking Directory: ${this.workingDirectory}`,
       });
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Image generated successfully!\n\nOutput: ${processResult.outputPath}\nModel: ${model}\nDimensions: ${processResult.width}x${processResult.height}\nFile size: ${Math.round(processResult.fileSize / 1024)}KB\nProcessing time: ${result.processingTime}ms\nCost: $${cost.toFixed(3)}\nWorking Directory: ${this.workingDirectory}`,
-          },
-        ],
-      };
+      return { content };
 
     } catch (err) {
       // Clean up any temp files
@@ -270,17 +267,9 @@ class FluxMcpServer {
       // Initialize working directory
       this.workingDirectory = await ensureWorkingDirectory(config.workingDirectory);
       
-      info('Starting Flux Replicate MCP Server', {
-        platform: process.platform,
-        workingDirectory: this.workingDirectory
-      });
-      
       const transport = new StdioServerTransport();
       await this.server.connect(transport);
       
-      info('Server started successfully', {
-        workingDirectory: this.workingDirectory
-      });
     } catch (err) {
       error('Failed to start server', { error: err instanceof Error ? err.message : 'Unknown error' });
       process.exit(1);
@@ -291,7 +280,6 @@ class FluxMcpServer {
    * Shutdown the server
    */
   shutdown = async (): Promise<void> => {
-    info('Shutting down server');
     await this.tempManager.cleanupAll();
     await this.server.close();
   };
